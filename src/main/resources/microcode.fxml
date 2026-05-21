@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+      fx:controller="gui.MicrocodeController"
+      spacing="16"
+      alignment="TOP_CENTER"
+      stylesheets="@microcode.css"
+      styleClass="root">
+
+    <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
+    <HBox spacing="20" alignment="CENTER_LEFT" styleClass="top-bar">
+
+        <Label text="Микрокоманда" styleClass="title"/>
+
+        <HBox fx:id="microAddressRow" spacing="6" alignment="CENTER"/>
+
+        <Label fx:id="microHexLabel" text="HEX: 0" styleClass="hex-label"/>
+
+        <Label fx:id="statusLabel" text="● НЕ ЗАГРУЖЕНА" styleClass="status-bad"/>
+
+        <Region HBox.hgrow="ALWAYS"/>
+
+        <Button fx:id="loadButton" text="Загрузить" onAction="#onLoad"
+                styleClass="btn-primary" prefWidth="140" prefHeight="36"/>
+
+    </HBox>
+
+    <!-- ТЕТРАДЫ -->
+    <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
+                styleClass="tetrad-scroll">
+        <HBox fx:id="bitRow" spacing="10" alignment="CENTER"
+              styleClass="tetrad-row"/>
+    </ScrollPane>
+
+    <!-- НИЖНЯЯ ПАНЕЛЬ: ПУСК + ВВОД ДАННЫХ -->
+    <HBox spacing="40" alignment="CENTER" styleClass="bottom-panel">
+
+        <VBox spacing="8" alignment="CENTER" styleClass="small-block">
+            <Label text="Адрес" styleClass="small-title"/>
+            <HBox fx:id="addressRow" spacing="6" alignment="CENTER"/>
+        </VBox>
+
+        <VBox spacing="8" alignment="CENTER" styleClass="small-block">
+            <Label text="Данные" styleClass="small-title"/>
+            <HBox fx:id="dataRow" spacing="6" alignment="CENTER"/>
+        </VBox>
+
+        <VBox spacing="8" alignment="CENTER" styleClass="small-block">
+            <Label text="Мультиплексор" styleClass="small-title"/>
+            <HBox fx:id="muxRow" spacing="6" alignment="CENTER"/>
+        </VBox>
+
+        <VBox spacing="12" alignment="CENTER" styleClass="small-block">
+            <Button fx:id="startButton" text="Пуск" onAction="#onStart"
+                    styleClass="btn-start" prefWidth="120" prefHeight="36"/>
+            <Button fx:id="loadButtonOnPanel" text="Загрузить" onAction="#onLoad"
+                    styleClass="btn-primary" prefWidth="120" prefHeight="36"/>
+        </VBox>
+
+    </HBox>
+
+    <!-- ИНДИКАТОРЫ -->
+    <VBox spacing="10" alignment="CENTER_LEFT" styleClass="block">
+        <Label text="Индикаторы" styleClass="block-title"/>
+        <Separator/>
+        <HBox fx:id="indicatorRow" spacing="20" alignment="CENTER_LEFT"/>
+    </VBox>
+
+    <!-- РЕГИСТРЫ -->
+    <VBox spacing="10" alignment="CENTER_LEFT" styleClass="block">
+        <Label text="Регистры и флаги" styleClass="block-title"/>
+        <Separator/>
+        <HBox fx:id="statusBar" spacing="8" alignment="CENTER_LEFT"/>
+    </VBox>
+
+</VBox>

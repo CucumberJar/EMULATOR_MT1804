@@ -1,26 +1,86 @@
 package alu;
 
-import lombok.Setter;
 import register.Register;
 
+
 public class ALU {
-    private Register out = new Register(-1);
-    @Setter
+    private Register out = new Register();
     private int c0;
-
-    @Setter
-    private int microcode;
-
     private int c4;
     private int ovr;
     private int z;
     private int f3;
+    private int code;
     private Register r;
     private Register s;
 
+    public Register getOut() {
+        return out;
+    }
 
+    public void setOut(Register out) {
+        this.out = out;
+    }
 
-    public void setSource(Register r, Register s) {
+    public int getC0() {
+        return c0;
+    }
+
+    public void setC0(int c0) {
+        this.c0 = c0;
+    }
+
+    public int getC4() {
+        return c4;
+    }
+
+    public void setC4(int c4) {
+        this.c4 = c4;
+    }
+
+    public int getOvr() {
+        return ovr;
+    }
+
+    public void setOvr(int ovr) {
+        this.ovr = ovr;
+    }
+
+    public int getZ() {
+        return z;
+    }
+
+    public void setZ(int z) {
+        this.z = z;
+    }
+
+    public int getF3() {
+        return f3;
+    }
+
+    public void setF3(int f3) {
+        this.f3 = f3;
+    }
+
+    public Register getR() {
+        return r;
+    }
+
+    public void setR(Register r) {
+        this.r = r;
+    }
+
+    public Register getS() {
+        return s;
+    }
+
+    public void setS(Register s) {
+        this.s = s;
+    }
+
+    public void setSource(int code, int c0, Register r, Register s) {
+        this.code=code;
+        this.c0=c0;
         this.r = r;
         this.s = s;
     }
@@ -34,7 +94,7 @@ public class ALU {
         int[] r = this.r.getData();
         int[] s = this.s.getData();
         int[] out = this.out.getData();
-        switch (microcode) {
+        switch (code) {
 
             // 000  R + S + C0
             case 0:
@@ -90,7 +150,7 @@ public class ALU {
 
             default:
                 throw new IllegalArgumentException(
-                        "Unknown microcode: " + microcode
+                        "Unknown microcode: " + code
                 );
         }
 
