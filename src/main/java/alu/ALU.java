@@ -162,7 +162,9 @@ public class ALU {
         }
 
         f3 = out[0];
+        System.out.println("РЕЗУЛТАТ АЛУ: "+ this.out.toString());
         return this.out;
+
     }
 
 

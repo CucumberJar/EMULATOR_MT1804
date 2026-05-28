@@ -5,7 +5,7 @@ import java.util.Arrays;
 public class Register {
 
 
-    private int[] data = new int[]{0,0,0,0};
+    private int[] data = new int[]{0, 0, 0, 0};
 
     public Register() {
     }
@@ -26,9 +26,13 @@ public class Register {
     }
 
     public void write(Register source) {
-        for (int i = 0; i < 4 ; i++) {
-            data[i]=source.getData()[i];
+        for (int i = 0; i < 4; i++) {
+            data[i] = source.getData()[i];
         }
     }
 
+    @Override
+    public String toString() {
+        return "" + data[0] + data[1] + data[2] + data[3];
+    }
 }

@@ -1,7 +1,7 @@
 package gui;
 
+import app.CPU;
 import javafx.animation.PauseTransition;
-import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -13,12 +13,16 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
+import java.util.Arrays;
+
 public class MicrocodeController {
 
     // =========================
     // ПОЛЯ ДАННЫХ
     // =========================
 
+    private static CPU cpu = new CPU();
+    private int value = 0;
     private final int[] addressBits = new int[4];
     private final int[] dataBits = new int[4];
     private final int[] muxBits = new int[3];
@@ -26,8 +30,10 @@ public class MicrocodeController {
     private final int[] bits = new int[32];
     private final Label[] registerLabels = new Label[16];
     private final Label[][] indicators = new Label[3][4];
+    boolean isLoad = true;
 
     private Label qLabel;
+    private Label fLabel;
     private Label zLabel;
     private Label f3Label;
     private Label ovrLabel;
@@ -37,19 +43,32 @@ public class MicrocodeController {
     // FXML КОМПОНЕНТЫ
     // =========================
 
-    @FXML private HBox indicatorRow;
-    @FXML private HBox statusBar;
-    @FXML private ToggleButton modeSwitch;
-    @FXML private Button startButton;
-    @FXML private Button loadButtonOnPanel;
-    @FXML private HBox addressRow;
-    @FXML private HBox dataRow;
-    @FXML private HBox muxRow;
-    @FXML private HBox bitRow;
-    @FXML private HBox microAddressRow;
-    @FXML private Button loadButton;
-    @FXML private Label microHexLabel;
-    @FXML private Label statusLabel;
+    @FXML
+    private HBox indicatorRow;
+    @FXML
+    private VBox statusBar;
+    @FXML
+    private ToggleButton modeSwitch;
+    @FXML
+    private Button startButton;
+    @FXML
+    private Button loadButtonOnPanel;
+    @FXML
+    private HBox addressRow;
+    @FXML
+    private HBox dataRow;
+    @FXML
+    private HBox muxRow;
+    @FXML
+    private HBox bitRow;
+    @FXML
+    private HBox microAddressRow;
+    @FXML
+    private Button loadButton;
+    @FXML
+    private Label microHexLabel;
+    @FXML
+    private Label statusLabel;
 
     // =========================
     // ИНИЦИАЛИЗАЦИЯ
@@ -57,32 +76,71 @@ public class MicrocodeController {
 
     @FXML
     public void initialize() {
+        cpu.start();
+        setupModeSwitch();
         createIndicators();
         createStatusBar();
         createAddressButtons();
         createDataButtons();
         createMuxButtons();
-        setupModeSwitch();
         createMicroAddressButtons();
         createBitTetrads();
         updateMicroHex();
 
-        // Тестовые индикаторы
         updateLed(indicators[0][0], true);
         updateLed(indicators[0][1], false);
     }
 
+    @FXML
+    private void handleStart() {
+        startButton.setStyle("-fx-background-color: #4CAF50; -fx-font-size: 14px; -fx-padding: 10 20;");
+        if (!isLoad) {
+            System.out.println("ТАКТ");
+            cpu.tact();
+            for (int i = 0; i < 16; i++) {
+                registerLabels[i].setText("R:" + i+":" + cpu.getRegister(i).toString());
+            }
+            qLabel.setText("Q:" + cpu.getQ());
+            fLabel.setText("F:" + cpu.getAlu().getOvr());
+            zLabel.setText(String.valueOf(cpu.getFlags()[2]));
+            ovrLabel.setText(String.valueOf(cpu.getFlags()[3]));
+            f3Label.setText(String.valueOf(cpu.getFlags()[1]));
+            c4Label.setText(String.valueOf(cpu.getFlags()[0]));
+
+        }
+        PauseTransition pause = new PauseTransition(Duration.millis(120));
+        pause.setOnFinished(e -> {
+            startButton.setStyle("-fx-font-size: 14px; -fx-padding: 10 20;");
+        });
+        pause.play();
+
+    }
     // =========================
-    // СОЗДАНИЕ КНОПОК УПРАВЛЕНИЯ
-    // =========================
+// РЕЖИМ РАБОТЫ/ЗАГРУЗКИ
+// =========================
+
+    private void setupModeSwitch() {
+        modeSwitch.setMinSize(150, 20);
+
+        modeSwitch.selectedProperty().addListener((obs, oldVal, newVal) -> {
+            isLoad = !isLoad;
+            if (!isLoad) {
+                modeSwitch.setText("РАБОТА");
+            } else {
+                modeSwitch.setText("ЗАГРУЗКА");
+            }
+        });
+    }
+
 
     private void createAddressButtons() {
         for (int i = 0; i < 4; i++) {
             int idx = i;
-            Button btn = createControlBitButton();
+            Button btn = new Button("0");
+            btn.setPrefSize(30, 30);
             btn.setOnAction(e -> {
                 addressBits[idx] ^= 1;
-                updateBitButton(btn, addressBits[idx]);
+                btn.setText(String.valueOf(addressBits[idx]));
             });
             addressRow.getChildren().add(btn);
         }
@@ -91,10 +149,11 @@ public class MicrocodeController {
     private void createDataButtons() {
         for (int i = 0; i < 4; i++) {
             int idx = i;
-            Button btn = createControlBitButton();
+            Button btn = new Button("0");
+            btn.setPrefSize(30, 30);
             btn.setOnAction(e -> {
                 dataBits[idx] ^= 1;
-                updateBitButton(btn, dataBits[idx]);
+                btn.setText(String.valueOf(dataBits[idx]));
             });
             dataRow.getChildren().add(btn);
         }
@@ -103,10 +162,11 @@ public class MicrocodeController {
     private void createMuxButtons() {
         for (int i = 0; i < 3; i++) {
             int idx = i;
-            Button btn = createControlBitButton();
+            Button btn = new Button("0");
+            btn.setPrefSize(30, 30);
             btn.setOnAction(e -> {
                 muxBits[idx] ^= 1;
-                updateBitButton(btn, muxBits[idx]);
+                btn.setText(String.valueOf(muxBits[idx]));
             });
             muxRow.getChildren().add(btn);
         }
@@ -115,30 +175,26 @@ public class MicrocodeController {
     private void createMicroAddressButtons() {
         for (int i = 0; i < 4; i++) {
             int idx = i;
-            Button btn = createBitButton();
+            Button btn = new Button("0");
+            btn.setPrefSize(30, 30);
             btn.setOnAction(e -> {
                 microAddress[idx] ^= 1;
-                updateBitButton(btn, microAddress[idx]);
+                btn.setText(String.valueOf(microAddress[idx]));
                 updateMicroHex();
             });
             microAddressRow.getChildren().add(btn);
         }
     }
 
-    // =========================
-    // СОЗДАНИЕ ТЕТРАД (ГРУПП БИТОВ)
-    // =========================
 
     private void createBitTetrads() {
-        bitRow.setSpacing(10);
+        bitRow.setSpacing(8);
         int index = 0;
 
-        bitRow.getChildren().add(createTetrad("Тетрада 7",
-                createBitBlock(4, index, "Адрес перехода")));
+        bitRow.getChildren().add(createTetrad("Тетрада 7", createBitBlock(4, index, "Адрес перехода")));
         index += 4;
 
-        bitRow.getChildren().add(createTetrad("Тетрада 6",
-                createBitBlock(4, index, "Тип перехода")));
+        bitRow.getChildren().add(createTetrad("Тетрада 6", createBitBlock(4, index, "Тип перехода")));
         index += 4;
 
         bitRow.getChildren().add(createTetrad("Тетрада 5",
@@ -156,45 +212,33 @@ public class MicrocodeController {
                 createBitBlock(3, index + 1, "АЛУ")));
         index += 4;
 
-        bitRow.getChildren().add(createTetrad("Тетрада 2",
-                createBitBlock(4, index, "Адрес A")));
+        bitRow.getChildren().add(createTetrad("Тетрада 2", createBitBlock(4, index, "Адрес A")));
         index += 4;
 
-        bitRow.getChildren().add(createTetrad("Тетрада 1",
-                createBitBlock(4, index, "Адрес B")));
+        bitRow.getChildren().add(createTetrad("Тетрада 1", createBitBlock(4, index, "Адрес B")));
         index += 4;
 
-        bitRow.getChildren().add(createTetrad("Тетрада 0",
-                createBitBlock(4, index, "Данные")));
+        bitRow.getChildren().add(createTetrad("Тетрада 0", createBitBlock(4, index, "Данные")));
     }
 
     private VBox createBitBlock(int size, int startIndex, String title) {
         VBox block = new VBox(4);
         block.setAlignment(Pos.CENTER);
-        block.getStyleClass().add("bit-block");
-        block.setPadding(new Insets(6));
+        block.setPadding(new Insets(4));
 
         Label label = new Label(title);
-        label.getStyleClass().add("bit-block-title");
 
-        HBox row = new HBox(4);
-        row.setSpacing(4);
+        HBox row = new HBox(2);
         row.setAlignment(Pos.CENTER);
 
         for (int i = 0; i < size; i++) {
             int idx = startIndex + i;
             Button btn = new Button("0");
-            btn.getStyleClass().add("bit-button");
-            btn.setPrefSize(26, 26);
+            btn.setPrefSize(24, 24);
 
             btn.setOnAction(e -> {
                 bits[idx] ^= 1;
                 btn.setText(String.valueOf(bits[idx]));
-                if (bits[idx] == 1) {
-                    setOnStyle(btn);
-                } else {
-                    setOffStyle(btn);
-                }
             });
 
             row.getChildren().add(btn);
@@ -205,35 +249,30 @@ public class MicrocodeController {
     }
 
     private VBox createTetrad(String title, VBox... groups) {
-        VBox wrapper = new VBox(6);
-        wrapper.setPadding(new Insets(8));
+        VBox wrapper = new VBox(4);
+        wrapper.setPadding(new Insets(6));
         wrapper.setAlignment(Pos.CENTER);
-        wrapper.getStyleClass().add("tetrad");
 
         Label label = new Label(title);
-        label.getStyleClass().add("tetrad-title");
-
-        HBox row = new HBox(6);
+        HBox row = new HBox(4);
         row.setAlignment(Pos.CENTER);
         row.getChildren().addAll(groups);
 
         wrapper.getChildren().addAll(label, row);
-
         return wrapper;
     }
 
-    // =========================
-    // ИНДИКАТОРЫ
-    // =========================
 
     private void createIndicators() {
         for (int group = 0; group < 3; group++) {
-            HBox tetrad = new HBox(8);
+            HBox tetrad = new HBox(6);
             tetrad.setAlignment(Pos.CENTER_LEFT);
-            tetrad.getStyleClass().add("indicator-tetrad");
 
             for (int bit = 0; bit < 4; bit++) {
-                Label led = createLed(false);
+                Label led = new Label();
+                led.setMinSize(16, 16);
+                led.setMaxSize(16, 16);
+                led.setStyle("-fx-background-color: #cccccc; -fx-background-radius: 50%;");
                 indicators[group][bit] = led;
                 tetrad.getChildren().add(led);
             }
@@ -242,199 +281,117 @@ public class MicrocodeController {
         }
     }
 
-    private Label createLed(boolean value) {
-        Label led = new Label();
-        led.setMinSize(18, 18);
-        led.setMaxSize(18, 18);
-        led.getStyleClass().add("led");
-        updateLed(led, value);
-        return led;
-    }
-
     private void updateLed(Label led, boolean value) {
-        if (value) {
-            led.getStyleClass().removeAll("led-off");
-            if (!led.getStyleClass().contains("led-on")) {
-                led.getStyleClass().add("led-on");
-            }
-        } else {
-            led.getStyleClass().removeAll("led-on");
-            if (!led.getStyleClass().contains("led-off")) {
-                led.getStyleClass().add("led-off");
-            }
-        }
+        led.setStyle(value ?
+                "-fx-background-color: #00ff00; -fx-background-radius: 50%;" :
+                "-fx-background-color: #cccccc; -fx-background-radius: 50%;");
     }
 
-    // =========================
-    // СТАТУС БАР (РЕГИСТРЫ И ФЛАГИ)
-    // =========================
 
     private void createStatusBar() {
-        // Регистры R0-R15
-        for (int i = 0; i < 16; i++) {
-            Label reg = createRegisterLabel("R" + i, "0000");
+        // Очищаем statusBar и делаем его VBox для двух строк
+        statusBar.getChildren().clear();
+        statusBar.setSpacing(8);
+
+        // Первая строка: R0-R7
+        HBox registersRow = new HBox(4);
+        registersRow.setAlignment(Pos.CENTER_LEFT);
+        registersRow.setPadding(new Insets(4));
+
+        for (int i = 0; i < 8; i++) {
+            Label reg = new Label("R" + i + " 0000");
+            reg.setPadding(new Insets(8, 16, 8, 16));
+            reg.setMinWidth(100);
+            reg.setAlignment(Pos.CENTER);
+            reg.setStyle("-fx-border-color: #cccccc; -fx-background-color: #f8f8f8; -fx-font-size: 14px; -fx-border-width: 1;");
             registerLabels[i] = reg;
-            statusBar.getChildren().add(reg);
+            registersRow.getChildren().add(reg);
         }
 
-        // Регистр Q
-        qLabel = createRegisterLabel("Q", "0");
-        statusBar.getChildren().add(qLabel);
+        // Вторая строка: R8-R15
+        HBox registersRowLow = new HBox(4);
+        registersRowLow.setAlignment(Pos.CENTER_LEFT);
+        registersRowLow.setPadding(new Insets(4));
 
-        // Разделитель
-        Region spacer = new Region();
-        spacer.setPrefWidth(20);
-        statusBar.getChildren().add(spacer);
-
-        // Флаги
-        zLabel = createFlagLabel("Z", false);
-        f3Label = createFlagLabel("F3", false);
-        ovrLabel = createFlagLabel("OVR", false);
-        c4Label = createFlagLabel("C4", false);
-
-        statusBar.getChildren().addAll(zLabel, f3Label, ovrLabel, c4Label);
-    }
-
-    private Label createRegisterLabel(String name, String value) {
-        Label label = new Label(name + " " + value);
-        label.getStyleClass().add("register-label");
-        return label;
-    }
-
-    private Label createFlagLabel(String name, boolean value) {
-        Label label = new Label();
-        updateFlag(label, name, value);
-        return label;
-    }
-
-    private void updateFlag(Label label, String name, boolean value) {
-        if (value) {
-            label.setText(name + ":1");
-            label.getStyleClass().removeAll("flag-off");
-            if (!label.getStyleClass().contains("flag-on")) {
-                label.getStyleClass().add("flag-on");
-            }
-        } else {
-            label.setText(name + ":0");
-            label.getStyleClass().removeAll("flag-on");
-            if (!label.getStyleClass().contains("flag-off")) {
-                label.getStyleClass().add("flag-off");
-            }
+        for (int i = 8; i < 16; i++) {
+            Label reg = new Label("R" + i + " 0000");
+            reg.setPadding(new Insets(8, 16, 8, 16));
+            reg.setMinWidth(100);
+            reg.setAlignment(Pos.CENTER);
+            reg.setStyle("-fx-border-color: #cccccc; -fx-background-color: #f8f8f8; -fx-font-size: 14px; -fx-border-width: 1;");
+            registerLabels[i] = reg;
+            registersRowLow.getChildren().add(reg);
         }
+
+        // Третья строка: Q, F | Z и флаги
+        HBox specialRow = new HBox(10);
+        specialRow.setAlignment(Pos.CENTER_LEFT);
+        specialRow.setPadding(new Insets(4));
+
+        qLabel = new Label("Q: 0000");
+        qLabel.setPadding(new Insets(8, 16, 8, 16));
+        qLabel.setMinWidth(100);
+        qLabel.setAlignment(Pos.CENTER);
+        qLabel.setStyle("-fx-border-color: #cccccc; -fx-background-color: #f8f8f8; -fx-font-size: 14px; -fx-border-width: 1;");
+
+        fLabel = new Label("F: 0000");
+        fLabel.setPadding(new Insets(8, 16, 8, 16));
+        fLabel.setMinWidth(100);
+        fLabel.setAlignment(Pos.CENTER);
+        fLabel.setStyle("-fx-border-color: #cccccc; -fx-background-color: #f8f8f8; -fx-font-size: 14px; -fx-border-width: 1;");
+
+        Region spacer1 = new Region();
+        spacer1.setPrefWidth(20);
+
+        zLabel = new Label("Z: 0");
+        zLabel.setPadding(new Insets(8, 16, 8, 16));
+        zLabel.setMinWidth(70);
+        zLabel.setAlignment(Pos.CENTER);
+        zLabel.setStyle("-fx-border-color: #cccccc; -fx-background-color: #f8f8f8; -fx-font-size: 14px; -fx-border-width: 1;");
+
+        f3Label = new Label("F3: 0");
+        f3Label.setPadding(new Insets(8, 16, 8, 16));
+        f3Label.setMinWidth(70);
+        f3Label.setAlignment(Pos.CENTER);
+        f3Label.setStyle("-fx-border-color: #cccccc; -fx-background-color: #f8f8f8; -fx-font-size: 14px; -fx-border-width: 1;");
+
+        ovrLabel = new Label("OVR: 0");
+        ovrLabel.setPadding(new Insets(8, 16, 8, 16));
+        ovrLabel.setMinWidth(80);
+        ovrLabel.setAlignment(Pos.CENTER);
+        ovrLabel.setStyle("-fx-border-color: #cccccc; -fx-background-color: #f8f8f8; -fx-font-size: 14px; -fx-border-width: 1;");
+
+        c4Label = new Label("C4: 0");
+        c4Label.setPadding(new Insets(8, 16, 8, 16));
+        c4Label.setMinWidth(70);
+        c4Label.setAlignment(Pos.CENTER);
+        c4Label.setStyle("-fx-border-color: #cccccc; -fx-background-color: #f8f8f8; -fx-font-size: 14px; -fx-border-width: 1;");
+
+        specialRow.getChildren().addAll(qLabel, fLabel, spacer1, zLabel, f3Label, ovrLabel, c4Label);
+
+        // Добавляем все три строки
+        statusBar.getChildren().addAll(registersRow, registersRowLow, specialRow);
     }
-
-    // =========================
-    // ВСПОМОГАТЕЛЬНЫЕ КНОПКИ И БИТЫ
-    // =========================
-
-    private Button createControlBitButton() {
-        Button btn = new Button("0");
-        btn.getStyleClass().add("control-bit-button");
-        btn.setPrefSize(30, 30);
-        setOffStyle(btn);
-        return btn;
-    }
-
-    private Button createBitButton() {
-        Button btn = new Button("0");
-        btn.getStyleClass().add("microaddr-bit-button");
-        btn.setPrefSize(30, 30);
-        return btn;
-    }
-
-    private void updateBitButton(Button btn, int value) {
-        btn.setText(String.valueOf(value));
-        if (value == 1) {
-            setOnStyle(btn);
-        } else {
-            setOffStyle(btn);
-        }
-    }
-
-    // =========================
-    // СТИЛИ КНОПОК
-    // =========================
-
-    private void setOnStyle(Button btn) {
-        btn.getStyleClass().removeAll("bit-off");
-        if (!btn.getStyleClass().contains("bit-on")) {
-            btn.getStyleClass().add("bit-on");
-        }
-    }
-
-    private void setOffStyle(Button btn) {
-        btn.getStyleClass().removeAll("bit-on");
-        if (!btn.getStyleClass().contains("bit-off")) {
-            btn.getStyleClass().add("bit-off");
-        }
-    }
-
-    // =========================
-    // РЕЖИМ РАБОТЫ/ЗАГРУЗКИ
-    // =========================
-
-    private void setupModeSwitch() {
-        modeSwitch.selectedProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal) {
-                modeSwitch.setText("РАБОТА");
-                modeSwitch.getStyleClass().removeAll("mode-load");
-                if (!modeSwitch.getStyleClass().contains("mode-run")) {
-                    modeSwitch.getStyleClass().add("mode-run");
-                }
-            } else {
-                modeSwitch.setText("ЗАГРУЗКА");
-                modeSwitch.getStyleClass().removeAll("mode-run");
-                if (!modeSwitch.getStyleClass().contains("mode-load")) {
-                    modeSwitch.getStyleClass().add("mode-load");
-                }
-            }
-        });
-    }
-
-    // =========================
-    // ОБНОВЛЕНИЕ HEX
-    // =========================
 
     private void updateMicroHex() {
-        int value = 0;
+        value = 0;
         for (int i = 0; i < 4; i++) {
             value <<= 1;
             value |= microAddress[i];
         }
         microHexLabel.setText("Адрес: " + value);
-
     }
 
-    // =========================
-    // ОБРАБОТЧИКИ СОБЫТИЙ
-    // =========================
 
     @FXML
-    private void onStart() {
-        startButton.getStyleClass().add("start-pressed");
-
-        PauseTransition pause = new PauseTransition(Duration.millis(120));
-        pause.setOnFinished(e -> {
-            startButton.getStyleClass().remove("start-pressed");
-        });
-        pause.play();
-
-        System.out.println("ТАКТ");
-    }
-
-    @FXML
-    public void onLoad(ActionEvent actionEvent) {
-        // Здесь будет логика загрузки микрокоманды
+    private void handleLoad() {
+        if (isLoad){
+        cpu.load(value, bits);
         statusLabel.setText("● ЗАГРУЖЕНА");
-        statusLabel.getStyleClass().removeAll("status-not-loaded");
-        if (!statusLabel.getStyleClass().contains("status-loaded")) {
-            statusLabel.getStyleClass().add("status-loaded");
-        }
         System.out.println("ЗАГРУЗКА МИКРОКОМАНДЫ");
-    }
-
-    @FXML
-    public void onStart(ActionEvent actionEvent) {
-        onStart();
+        System.out.println(Arrays.toString(bits));
+        cpu.getMicroInstruction()[value].decode();
+        System.out.println(cpu.getMicroInstruction()[value]);}
+        System.out.println("Ошибка, включен режим загрузки");
     }
 }

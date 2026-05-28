@@ -4,6 +4,7 @@ import register.Register;
 
 public class Destination {
     public void write(int code, Register q, Register b, Register f, Register a, int ms2, int ms1) {
+
         Register register = new Register();
         switch (code) {
             case 0:

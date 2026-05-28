@@ -3,7 +3,20 @@ package alu;
 import register.Register;
 
 public class MicroInstruction {
-    private final int[] instruction;
+    private  int[] instruction = new int[32];
+
+
+    public int[] getInstruction() {
+        return instruction;
+    }
+public  void clear(){
+    for (int i = 0; i < 32; i++) {
+    instruction[i]=0;
+    }
+}
+    public void setInstruction(int[] instruction) {
+        this.instruction = instruction;
+    }
 
     // 0-3
     private Register d = new Register();
@@ -38,18 +51,8 @@ public class MicroInstruction {
     // 28-31
     private int address;
 
-    public MicroInstruction(int[] instruction) {
-        if (instruction.length != 32) {
-            throw new IllegalArgumentException(
-                    "Microinstruction must contain 32 bits"
-            );
-        }
-        this.instruction = instruction.clone();
-        decode();
-    }
 
-
-    private void decode() {
+    public void decode() {
         d.setData(instruction[31],instruction[30],instruction[29],instruction[28]);
         bCode = bitsToInt(27, 24);
         aCode = bitsToInt(23, 20);
@@ -65,7 +68,8 @@ public class MicroInstruction {
 
     private int bitsToInt(int from, int to) {
         int value = 0;
-        for (int i = from; i >= to; i--) {
+        for (int i = to; i <= from; i++
+        ) {
             value <<= 1;
             value |= instruction[i];
         }
