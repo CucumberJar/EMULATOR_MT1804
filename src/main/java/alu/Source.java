@@ -3,73 +3,53 @@ package alu;
 import register.Register;
 
 public class Source {
-    private final Register zero = new Register();
-    private Register r;
-    private Register s;
+    private int r = 0;
+    private int s = 0;
 
-    public Register getR() {
-        return r;
-    }
+    public void select(int sourceCode, Register a, Register b, Register d, Register q) {
+        sourceCode = sourceCode & 0x7; // 3-битный код (0-7)
 
-    public Register getS() {
-        return s;
-    }
-
-    public void select(int code, Register a, Register b, Register d, Register q) {
-        zero.clear();
-        switch (code) {
-            // 000 -> R=A , S=B
-            case 0:
-                r = a;
-                s = q;
+        switch (sourceCode) {
+            case 0: // А, Q
+                this.r = a.getValue();
+                this.s = q.getValue();
                 break;
-
-            // 001 -> R=A , S=B
-            case 1:
-                r = a;
-                s = b;
+            case 1: // А, B
+                this.r = a.getValue();
+                this.s = b.getValue();
                 break;
-
-            // 010 -> R=0 , S=Q
-            case 2:
-                r = zero;
-                s = q;
+            case 2: // 0, Q
+                this.r = 0;
+                this.s = q.getValue();
                 break;
-
-            // 011 -> R=0 , S=B
-            case 3:
-                r = zero;
-                s = b;
+            case 3: // 0, B
+                this.r = 0;
+                this.s = b.getValue();
                 break;
-
-            // 100 -> R=0 , S=A
-            case 4:
-                r = zero;
-                s = a;
+            case 4: // 0, A
+                this.r = 0;
+                this.s = a.getValue();
                 break;
-
-            // 101 -> R=D , S=A
-            case 5:
-                r = d;
-                s = a;
+            case 5: // D, A
+                this.r = d.getValue();
+                this.s = a.getValue();
                 break;
-
-            // 110 -> R=D , S=Q
-            case 6:
-                r = d;
-                s = q;
+            case 6: // D, Q
+                this.r = d.getValue();
+                this.s = q.getValue();
                 break;
-
-            // 111 -> R=D , S=0
-            case 7:
-                r = d;
-                s = zero;
+            case 7: // D, 0
+                this.r = d.getValue();
+                this.s = 0;
                 break;
-
-            default:
-                throw new IllegalArgumentException("Unknown source code: " + code);
         }
     }
 
+    public int getR() { return r & 0xF; }
+    public int getS() { return s & 0xF; }
 
+    @Override
+    public String toString() {
+        return "Source{R=" + r + ", S=" + s + "}";
+    }
 }

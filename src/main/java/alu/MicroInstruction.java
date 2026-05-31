@@ -3,139 +3,77 @@ package alu;
 import register.Register;
 
 public class MicroInstruction {
-    private  int[] instruction = new int[32];
+    private final Register d = new Register(); // Поле ввода констант / Direct Data
 
+    // Поля БИС К1804ВС1 (АЛУ)
+    private int aCode;           // Адрес регистра А (4 бита)
+    private int bCode;           // Адрес регистра B (4 бита)
+    private int sourceCode;      // Код источников Source (3 бита)
+    private int aluCode;         // Код операции АЛУ (3 бита)
+    private int destinationCode; // Код назначения Destination (3 бита)
+    private int c0;              // Перенос C0 (1 бит)
+    private int ms1, ms2;        // Управление сдвигами (по 1 биту)
 
-    public int[] getInstruction() {
-        return instruction;
-    }
-public  void clear(){
-    for (int i = 0; i < 32; i++) {
-    instruction[i]=0;
-    }
-}
-    public void setInstruction(int[] instruction) {
-        this.instruction = instruction;
-    }
+    // Поля БМУ К1804ВУ4 (Управление переходами из таблицы)
+    private int pCode;           // Тип ветвления P3-P0 (4 бита)
+    private int brAddress;       // Адрес ветвления BR (4 бита)
 
-    // 0-3
-    private Register d = new Register();
+    public void setInstruction(int[] bits) {
+        if (bits == null || bits.length < 32) return;
 
-    // 4-7
-    private int bCode;
+        // Тетрада 2: Адрес A (биты 8..11)
+        this.aCode           = parseBits(bits, 8, 4);
 
-    // 8-11
-    private int aCode;
+        // Тетрада 1: Адрес B (биты 4..7)
+        this.bCode           = parseBits(bits, 4, 4);
 
-    // 12-14
-    private int aluCode;
+        // Тетрада 4: Источник ИСТОП (биты 16..18)
+        this.sourceCode      = parseBits(bits, 16, 3);
 
-    // 15
-    private int c0;
+        // Тетрада 3: Код операции АЛУ (биты 12..14)
+        this.aluCode         = parseBits(bits, 12, 3);
 
-    // 16-18
-    private int sourceCode;
+        // Тетрада 5: Приемник ПРИОП (биты 20..22)
+        this.destinationCode = parseBits(bits, 20, 3);
 
-    // 19
-    private int ms1;
+        // Одиночные управляющие биты из Тетрад 3, 4, 5
+        this.c0              = bits[15]; // Бит 15 (Тетрада 3)
+        this.ms1             = bits[19]; // Бит 19 (Тетрада 4)
+        this.ms2             = bits[23]; // Бит 23 (Тетрада 5)
 
-    // 20-22
-    private int destinationCode;
+        // Тетрада 6: Тип перехода P3-P0 БМУ К1804ВУ4 (биты 24..27)
+        this.pCode           = parseBits(bits, 24, 4);
 
-    // 23
-    private int ms2;
+        // Тетрада 7: Адрес ветвления BR БМУ К1804ВУ4 (биты 28..31)
+        this.brAddress       = parseBits(bits, 28, 4);
 
-    // 24-27
-    private int controlCode;
-
-    // 28-31
-    private int address;
-
-
-    public void decode() {
-        d.setData(instruction[31],instruction[30],instruction[29],instruction[28]);
-        bCode = bitsToInt(27, 24);
-        aCode = bitsToInt(23, 20);
-        aluCode = bitsToInt(19, 17);
-        c0 = instruction[16];
-        sourceCode = bitsToInt(15, 13);
-        ms1 = instruction[12];
-        destinationCode = bitsToInt(11, 9);
-        ms2 = instruction[8];
-        controlCode = bitsToInt(7, 4);
-        address = bitsToInt(3, 0);
+        // Тетрада 0: Входные данные D (биты 0..3)
+        this.d.setValue(parseBits(bits, 0, 4));
     }
 
-    private int bitsToInt(int from, int to) {
-        int value = 0;
-        for (int i = to; i <= from; i++
-        ) {
-            value <<= 1;
-            value |= instruction[i];
+    private int parseBits(int[] bits, int start, int length) {
+        int val = 0;
+        for (int i = 0; i < length; i++) {
+            val = (val << 1) | (bits[start + i] & 1);
         }
-        return value;
+        return val;
     }
 
-
-    public Register getD() {
-        return d;
-    }
-
-    public int getBCode() {
-        return bCode;
-    }
-
-    public int getACode() {
-        return aCode;
-    }
-
-    public int getAluCode() {
-        return aluCode;
-    }
-
-    public int getC0() {
-        return c0;
-    }
-
-    public int getSourceCode() {
-        return sourceCode;
-    }
-
-    public int getDestinationCode() {
-        return destinationCode;
-    }
-
-    public int getMs1() {
-        return ms1;
-    }
-
-    public int getMs2() {
-        return ms2;
-    }
-
-    public int getControlCode() {
-        return controlCode;
-    }
-
-    public int getAddress() {
-        return address;
-    }
+    // Геттеры
+    public int getACode() { return aCode; }
+    public int getBCode() { return bCode; }
+    public int getSourceCode() { return sourceCode; }
+    public int getAluCode() { return aluCode; }
+    public int getDestinationCode() { return destinationCode; }
+    public int getC0() { return c0; }
+    public int getMs1() { return ms1; }
+    public int getMs2() { return ms2; }
+    public int getPCode() { return pCode; }
+    public int getBRAddress() { return brAddress; }
+    public Register getD() { return d; }
 
     @Override
     public String toString() {
-
-        return "MicroInstruction{" +
-                "d=" + d +
-                ", bCode=" + bCode +
-                ", aCode=" + aCode +
-                ", aluCode=" + aluCode +
-                ", c0=" + c0 +
-                ", sourceCode=" + sourceCode +
-                ", destinationCode=" + destinationCode +
-                ", ms1=" + ms1 +
-                ", ms2=" + ms2 +
-                ", controlCode=" + controlCode +
-                ", address=" + address +
-                '}';
+        return "Microcode{A=" + aCode + ", B=" + bCode + ", ALU=" + aluCode + ", P_CODE=" + pCode + ", BR=" + brAddress + "}";
     }
 }

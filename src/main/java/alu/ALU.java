@@ -1,204 +1,71 @@
 package alu;
 
-import register.Register;
-
-
 public class ALU {
-    private Register out = new Register();
-    private int c0;
-    private int c4;
-    private int ovr;
-    private int z;
-    private int f3;
-    private int code;
-    private Register r;
-    private Register s;
+    private int aluCode;
+    private int c0; // Входной перенос
+    private int r;
+    private int s;
+    private int out; // Выход АЛУ
 
-    public Register getOut() {
-        return out;
+    // Флаги
+    private int c4, f3, z, ovr;
+
+    public void setSource(int aluCode, int c0, int r, int s) {
+        this.aluCode = aluCode & 0x7;
+        this.c0 = c0 & 0x1;
+        this.r = r & 0xF;
+        this.s = s & 0xF;
     }
 
-    public void setOut(Register out) {
-        this.out = out;
-    }
+    public void operation() {
+        int result = 0;
+        int tempOvr = 0;
 
-    public int getC0() {
-        return c0;
-    }
-
-    public void setC0(int c0) {
-        this.c0 = c0;
-    }
-
-    public int getC4() {
-        return c4;
-    }
-
-    public void setC4(int c4) {
-        this.c4 = c4;
-    }
-
-    public int getOvr() {
-        return ovr;
-    }
-
-    public void setOvr(int ovr) {
-        this.ovr = ovr;
-    }
-
-    public int getZ() {
-        return z;
-    }
-
-    public void setZ(int z) {
-        this.z = z;
-    }
-
-    public int getF3() {
-        return f3;
-    }
-
-    public void setF3(int f3) {
-        this.f3 = f3;
-    }
-
-    public Register getR() {
-        return r;
-    }
-
-    public void setR(Register r) {
-        this.r = r;
-    }
-
-    public Register getS() {
-        return s;
-    }
-
-    public void setS(Register s) {
-        this.s = s;
-    }
-
-    public void setSource(int code, int c0, Register r, Register s) {
-        this.code=code;
-        this.c0=c0;
-        this.r = r;
-        this.s = s;
-    }
-
-    public Register operation() {
-        out.clear();
-        z = 1;
-        f3 = 0;
-        c4 = 0;
-        ovr = 0;
-        int[] r = this.r.getData();
-        int[] s = this.s.getData();
-        int[] out = this.out.getData();
-        switch (code) {
-
-            // 000  R + S + C0
-            case 0:
-                arithmetic(r, s, false, out);
+        switch (aluCode) {
+            case 0: // R + S + C0 (Сложение)
+                result = r + s + c0;
+                // Переполнение знака для 4 бит
+                int rSign = (r >> 3) & 1;
+                int sSign = (s >> 3) & 1;
+                int outSign = ((result & 0xF) >> 3) & 1;
+                if (rSign == sSign && outSign != rSign) tempOvr = 1;
                 break;
-
-            // 001  S - R - 1 + C0
-            // S + ~R + C0
-            case 1:
-                arithmetic(s, r, true, out);
+            case 1: // S - R - 1 + C0 (Вычитание)
+                result = s + (~r & 0xF) + c0;
                 break;
-
-            // 010  R - S - 1 + C0
-            // R + ~S + C0
-            case 2:
-                arithmetic(r, s, true, out);
+            case 2: // R - S - 1 + C0 (Вычитание)
+                result = r + (~s & 0xF) + c0;
                 break;
-
-            // 011  R OR S
-            case 3:
-                for (int i = 0; i < 4; i++) {
-                    out[i] = (byte) (r[i] | s[i]);
-                }
+            case 3: // R | S (Поразрядное ИЛИ)
+                result = r | s;
                 break;
-
-            // 100  R AND S
-            case 4:
-                for (int i = 0; i < 4; i++) {
-                    out[i] = (byte) (r[i] & s[i]);
-                }
+            case 4: // R & S (Поразрядное И)
+                result = r & s;
                 break;
-
-            // 101  ~R AND S
-            case 5:
-                for (int i = 0; i < 4; i++) {
-                    out[i] = (byte) ((r[i] ^ 1) & s[i]);
-                }
+            case 5: // ~R & S (Маскирование)
+                result = (~r & 0xF) & s;
                 break;
-
-            // 110  R XOR S
-            case 6:
-                for (int i = 0; i < 4; i++) {
-                    out[i] = (byte) (r[i] ^ s[i]);
-                }
+            case 6: // R ^ S (Исключающее ИЛИ)
+                result = r ^ s;
                 break;
-
-            // 111  ~(R XOR S)
-            case 7:
-                for (int i = 0; i < 4; i++) {
-                    out[i] = (byte) ((r[i] ^ s[i]) ^ 1);
-                }
+            case 7: // ~(R ^ S) (Инверсия XOR)
+                result = ~(r ^ s) & 0xF;
                 break;
-
-            default:
-                throw new IllegalArgumentException(
-                        "Unknown microcode: " + code
-                );
         }
 
-        for (int i = 0; i < 4; i++) {
-            if (out[i] == 1) {
-                z = 0;
-                break;
-            }
-        }
+        this.out = result & 0xF;
 
-        f3 = out[0];
-        System.out.println("РЕЗУЛТАТ АЛУ: "+ this.out.toString());
-        return this.out;
-
+        // Расчет флагов
+        this.c4 = (result > 15 || result < 0) ? 1 : 0;
+        this.f3 = (this.out >> 3) & 1;
+        this.z  = (this.out == 0) ? 1 : 0;
+        this.ovr = tempOvr;
     }
 
-
-    private void arithmetic(int[] a, int[] b, boolean invertB, int[] out) {
-        int carry = c0;
-        int c3 = 0;
-        for (int i = 3; i >= 0; i--) {
-            int ai = a[i];
-            int bi = b[i];
-            if (invertB) {
-                bi ^= 1;
-            }
-            int sum = ai + bi + carry;
-            out[i] = (byte) (sum & 1);
-            carry = (sum >> 1) & 1;
-            if (i == 1) {
-                c3 = carry;
-            }
-        }
-        c4 = carry;
-        ovr = c4 ^ c3;
-    }
-
-    @Override
-    public String toString() {
-        return "ALU{" +
-                "OUT=" + out +
-                ", C0=" + c0 +
-                ", C4=" + c4 +
-                ", OVR=" + ovr +
-                ", Z=" + z +
-                ", F3=" + f3 +
-                ", R=" + r +
-                ", S=" + s +
-                '}';
-    }
+    public int getOut() { return out; }
+    public int getC4() { return c4; }
+    public int getF3() { return f3; }
+    public int getZ() { return z; }
+    public int getOvr() { return ovr; }
+    public void setC0(int c0) { this.c0 = c0; }
 }

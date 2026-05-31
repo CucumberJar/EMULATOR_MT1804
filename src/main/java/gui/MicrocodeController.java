@@ -21,7 +21,7 @@ public class MicrocodeController {
     // ПОЛЯ ДАННЫХ
     // =========================
 
-    private static CPU cpu = new CPU();
+    private static final CPU cpu = new CPU();
     private int value = 0;
     private final int[] addressBits = new int[4];
     private final int[] dataBits = new int[4];
@@ -30,7 +30,7 @@ public class MicrocodeController {
     private final int[] bits = new int[32];
     private final Label[] registerLabels = new Label[16];
     private final Label[][] indicators = new Label[3][4];
-    boolean isLoad = true;
+    private boolean isLoad = true;
 
     private Label qLabel;
     private Label fLabel;
@@ -91,47 +91,155 @@ public class MicrocodeController {
         updateLed(indicators[0][1], false);
     }
 
+    // =========================
+    // ОБРАБОТКА ТАКТА (СИНХРОННЫЙ ВЫВОД)
+    // =========================
+
     @FXML
     private void handleStart() {
         startButton.setStyle("-fx-background-color: #4CAF50; -fx-font-size: 14px; -fx-padding: 10 20;");
+
         if (!isLoad) {
-            System.out.println("ТАКТ");
+            System.out.println("ТАКТ СИМУЛЯЦИИ");
             cpu.tact();
-            for (int i = 0; i < 16; i++) {
-                registerLabels[i].setText("R:" + i+":" + cpu.getRegister(i).toString());
-            }
-            qLabel.setText("Q:" + cpu.getQ());
-            fLabel.setText("F:" + cpu.getAlu().getOvr());
-            zLabel.setText(String.valueOf(cpu.getFlags()[2]));
-            ovrLabel.setText(String.valueOf(cpu.getFlags()[3]));
-            f3Label.setText(String.valueOf(cpu.getFlags()[1]));
-            c4Label.setText(String.valueOf(cpu.getFlags()[0]));
 
+            // Принудительно заставляем JavaFX мгновенно обновить экран
+            javafx.application.Platform.runLater(() -> {
+                try {
+                    // Обновление РОН R0 - R15 на экране через рабочий toString() класса Register
+                    for (int i = 0; i < 16; i++) {
+                        if (cpu.getRegister(i) != null && registerLabels[i] != null) {
+                            registerLabels[i].setText("R" + i + ": " + cpu.getRegister(i).toString());
+                        }
+                    }
+
+                    // Обновление системных регистров и шины АЛУ (F)
+                    if (cpu.getQ() != null && qLabel != null) qLabel.setText("Q: " + cpu.getQ().toString());
+                    if (cpu.getAlu() != null && fLabel != null) fLabel.setText("F: " + cpu.getAlu().getOut());
+
+                    // Обновление триггерных флагов состояния [C4, F3, Z, OVR]
+                    if (cpu.getFlags() != null && cpu.getFlags().length >= 4) {
+                        if (c4Label != null)  c4Label.setText("C4: " + cpu.getFlags()[0]);
+                        if (f3Label != null) f3Label.setText("F3: " + cpu.getFlags()[1]);
+                        if (zLabel != null)   zLabel.setText("Z: " + cpu.getFlags()[2]);
+                        if (ovrLabel != null) ovrLabel.setText("OVR: " + cpu.getFlags()[3]);
+                    }
+                } catch (Exception e) {
+                    System.out.println("Ошибка перерисовки экрана: " + e.getMessage());
+                }
+            });
+
+        } else {
+            statusLabel.setText("● ОШИБКА: РЕЖИМ ЗАГРУЗКИ");
         }
-        PauseTransition pause = new PauseTransition(Duration.millis(120));
-        pause.setOnFinished(e -> {
-            startButton.setStyle("-fx-font-size: 14px; -fx-padding: 10 20;");
-        });
-        pause.play();
 
+        PauseTransition pause = new PauseTransition(Duration.millis(120));
+        pause.setOnFinished(e -> startButton.setStyle("-fx-font-size: 14px; -fx-padding: 10 20;"));
+        pause.play();
     }
+
     // =========================
-// РЕЖИМ РАБОТЫ/ЗАГРУЗКИ
-// =========================
+    // РЕЖИМ РАБОТЫ/ЗАГРУЗКИ
+    // =========================
 
     private void setupModeSwitch() {
         modeSwitch.setMinSize(150, 20);
-
         modeSwitch.selectedProperty().addListener((obs, oldVal, newVal) -> {
-            isLoad = !isLoad;
+            isLoad = !newVal;
             if (!isLoad) {
                 modeSwitch.setText("РАБОТА");
+                statusLabel.setText("● ГОТОВ К РАБОТЕ");
+                // Аппаратный сброс счётчика команд в 0 при переходе в режим симуляции
+                cpu.setMpc(0);
             } else {
                 modeSwitch.setText("ЗАГРУЗКА");
+                statusLabel.setText("● ОЖИДАНИЕ КОМАНДЫ");
             }
         });
     }
 
+    // =========================
+    // ТВОЙ ПОРЯДОК БИТ С ПРАВИЛЬНЫМИ ИНДЕКСАМИ CPU
+    // =========================
+
+    private void createBitTetrads() {
+        bitRow.getChildren().clear();
+        bitRow.setSpacing(8);
+
+        // Передаем размер поля, НАЧАЛЬНЫЙ (минимальный) индекс поля в массиве bits[] и название.
+        // Метод createBitBlock создаст кнопки слева направо: от bits[start] до bits[start + size - 1].
+
+        // Тетради БМУ (управляющая часть)
+        bitRow.getChildren().add(createTetrad("Тетрада 7", createBitBlock(4, 28, "Адрес перехода"))); // Биты: 28, 29, 30, 31
+        bitRow.getChildren().add(createTetrad("Тетрада 6", createBitBlock(4, 24, "Тип перехода")));  // Биты: 24, 25, 26, 27
+
+        // Операционная часть по таблице 2.1 методички
+        bitRow.getChildren().add(createTetrad("Тетрада 5",
+                createBitBlock(1, 23, "MS2"),       // Бит 23
+                createBitBlock(3, 20, "ПРИОП")));   // Биты: 20, 21, 22
+
+        bitRow.getChildren().add(createTetrad("Тетрада 4",
+                createBitBlock(1, 19, "MS1"),       // Бит 19
+                createBitBlock(3, 16, "ИСТОП")));   // Биты: 16, 17, 18
+
+        bitRow.getChildren().add(createTetrad("Тетрада 3",
+                createBitBlock(1, 15, "C0"),        // Бит 15
+                createBitBlock(3, 12, "АЛУ")));     // Биты: 12, 13, 14
+
+        bitRow.getChildren().add(createTetrad("Тетрада 2", createBitBlock(4, 8, "А")));            // Биты: 8, 9, 10, 11
+        bitRow.getChildren().add(createTetrad("Тетрада 1", createBitBlock(4, 4, "В")));            // Биты: 4, 5, 6, 7
+        bitRow.getChildren().add(createTetrad("Тетрада 0", createBitBlock(4, 0, "D")));            // Биты: 0, 1, 2, 3
+    }
+
+    private VBox createBitBlock(int size, int startIndex, String title) {
+        VBox block = new VBox(4);
+        block.setAlignment(Pos.CENTER);
+        block.setPadding(new Insets(4));
+
+        Label label = new Label(title);
+        HBox row = new HBox(2);
+        row.setAlignment(Pos.CENTER);
+
+        // ПРЯМОЙ ПОРЯДОК: биты заполняются в массив bits слева направо.
+        // Левая кнопка на экране -> bits[startIndex]
+        // Вторая кнопка -> bits[startIndex + 1]
+        // Правая кнопка -> bits[startIndex + size - 1]
+        for (int i = 0; i < size; i++) {
+            int idx = startIndex + i;
+            Button btn = new Button("0");
+            btn.setPrefSize(24, 24);
+            btn.setStyle("-fx-font-family: 'Courier New'; -fx-font-weight: bold;");
+
+            btn.setOnAction(e -> {
+                bits[idx] ^= 1;
+                btn.setText(String.valueOf(bits[idx]));
+            });
+
+            row.getChildren().add(btn);
+        }
+
+        block.getChildren().addAll(label, row);
+        return block;
+    }
+
+    // =========================
+    // ГЕНЕРАЦИЯ ЭЛЕМЕНТОВ ИНТЕРФЕЙСА
+    // =========================
+
+
+    private VBox createTetrad(String title, VBox... groups) {
+        VBox wrapper = new VBox(4);
+        wrapper.setPadding(new Insets(6));
+        wrapper.setAlignment(Pos.CENTER);
+
+        Label label = new Label(title);
+        HBox row = new HBox(4);
+        row.setAlignment(Pos.CENTER);
+        row.getChildren().addAll(groups);
+
+        wrapper.getChildren().addAll(label, row);
+        return wrapper;
+    }
 
     private void createAddressButtons() {
         for (int i = 0; i < 4; i++) {
@@ -186,83 +294,6 @@ public class MicrocodeController {
         }
     }
 
-
-    private void createBitTetrads() {
-        bitRow.setSpacing(8);
-        int index = 0;
-
-        bitRow.getChildren().add(createTetrad("Тетрада 7", createBitBlock(4, index, "Адрес перехода")));
-        index += 4;
-
-        bitRow.getChildren().add(createTetrad("Тетрада 6", createBitBlock(4, index, "Тип перехода")));
-        index += 4;
-
-        bitRow.getChildren().add(createTetrad("Тетрада 5",
-                createBitBlock(1, index, "MS2"),
-                createBitBlock(3, index + 1, "Приемник")));
-        index += 4;
-
-        bitRow.getChildren().add(createTetrad("Тетрада 4",
-                createBitBlock(1, index, "MS1"),
-                createBitBlock(3, index + 1, "Источник")));
-        index += 4;
-
-        bitRow.getChildren().add(createTetrad("Тетрада 3",
-                createBitBlock(1, index, "C0"),
-                createBitBlock(3, index + 1, "АЛУ")));
-        index += 4;
-
-        bitRow.getChildren().add(createTetrad("Тетрада 2", createBitBlock(4, index, "Адрес A")));
-        index += 4;
-
-        bitRow.getChildren().add(createTetrad("Тетрада 1", createBitBlock(4, index, "Адрес B")));
-        index += 4;
-
-        bitRow.getChildren().add(createTetrad("Тетрада 0", createBitBlock(4, index, "Данные")));
-    }
-
-    private VBox createBitBlock(int size, int startIndex, String title) {
-        VBox block = new VBox(4);
-        block.setAlignment(Pos.CENTER);
-        block.setPadding(new Insets(4));
-
-        Label label = new Label(title);
-
-        HBox row = new HBox(2);
-        row.setAlignment(Pos.CENTER);
-
-        for (int i = 0; i < size; i++) {
-            int idx = startIndex + i;
-            Button btn = new Button("0");
-            btn.setPrefSize(24, 24);
-
-            btn.setOnAction(e -> {
-                bits[idx] ^= 1;
-                btn.setText(String.valueOf(bits[idx]));
-            });
-
-            row.getChildren().add(btn);
-        }
-
-        block.getChildren().addAll(label, row);
-        return block;
-    }
-
-    private VBox createTetrad(String title, VBox... groups) {
-        VBox wrapper = new VBox(4);
-        wrapper.setPadding(new Insets(6));
-        wrapper.setAlignment(Pos.CENTER);
-
-        Label label = new Label(title);
-        HBox row = new HBox(4);
-        row.setAlignment(Pos.CENTER);
-        row.getChildren().addAll(groups);
-
-        wrapper.getChildren().addAll(label, row);
-        return wrapper;
-    }
-
-
     private void createIndicators() {
         for (int group = 0; group < 3; group++) {
             HBox tetrad = new HBox(6);
@@ -276,7 +307,6 @@ public class MicrocodeController {
                 indicators[group][bit] = led;
                 tetrad.getChildren().add(led);
             }
-
             indicatorRow.getChildren().add(tetrad);
         }
     }
@@ -287,19 +317,16 @@ public class MicrocodeController {
                 "-fx-background-color: #cccccc; -fx-background-radius: 50%;");
     }
 
-
     private void createStatusBar() {
-        // Очищаем statusBar и делаем его VBox для двух строк
         statusBar.getChildren().clear();
         statusBar.setSpacing(8);
 
-        // Первая строка: R0-R7
         HBox registersRow = new HBox(4);
         registersRow.setAlignment(Pos.CENTER_LEFT);
         registersRow.setPadding(new Insets(4));
 
         for (int i = 0; i < 8; i++) {
-            Label reg = new Label("R" + i + " 0000");
+            Label reg = new Label("R" + i + ": 0");
             reg.setPadding(new Insets(8, 16, 8, 16));
             reg.setMinWidth(100);
             reg.setAlignment(Pos.CENTER);
@@ -308,13 +335,12 @@ public class MicrocodeController {
             registersRow.getChildren().add(reg);
         }
 
-        // Вторая строка: R8-R15
         HBox registersRowLow = new HBox(4);
         registersRowLow.setAlignment(Pos.CENTER_LEFT);
         registersRowLow.setPadding(new Insets(4));
 
         for (int i = 8; i < 16; i++) {
-            Label reg = new Label("R" + i + " 0000");
+            Label reg = new Label("R" + i + ": 0");
             reg.setPadding(new Insets(8, 16, 8, 16));
             reg.setMinWidth(100);
             reg.setAlignment(Pos.CENTER);
@@ -323,21 +349,18 @@ public class MicrocodeController {
             registersRowLow.getChildren().add(reg);
         }
 
-        // Третья строка: Q, F | Z и флаги
         HBox specialRow = new HBox(10);
         specialRow.setAlignment(Pos.CENTER_LEFT);
         specialRow.setPadding(new Insets(4));
 
-        qLabel = new Label("Q: 0000");
+        qLabel = new Label("Q: 0");
         qLabel.setPadding(new Insets(8, 16, 8, 16));
         qLabel.setMinWidth(100);
-        qLabel.setAlignment(Pos.CENTER);
         qLabel.setStyle("-fx-border-color: #cccccc; -fx-background-color: #f8f8f8; -fx-font-size: 14px; -fx-border-width: 1;");
 
-        fLabel = new Label("F: 0000");
+        fLabel = new Label("F: 0");
         fLabel.setPadding(new Insets(8, 16, 8, 16));
         fLabel.setMinWidth(100);
-        fLabel.setAlignment(Pos.CENTER);
         fLabel.setStyle("-fx-border-color: #cccccc; -fx-background-color: #f8f8f8; -fx-font-size: 14px; -fx-border-width: 1;");
 
         Region spacer1 = new Region();
@@ -346,30 +369,24 @@ public class MicrocodeController {
         zLabel = new Label("Z: 0");
         zLabel.setPadding(new Insets(8, 16, 8, 16));
         zLabel.setMinWidth(70);
-        zLabel.setAlignment(Pos.CENTER);
         zLabel.setStyle("-fx-border-color: #cccccc; -fx-background-color: #f8f8f8; -fx-font-size: 14px; -fx-border-width: 1;");
 
         f3Label = new Label("F3: 0");
         f3Label.setPadding(new Insets(8, 16, 8, 16));
         f3Label.setMinWidth(70);
-        f3Label.setAlignment(Pos.CENTER);
         f3Label.setStyle("-fx-border-color: #cccccc; -fx-background-color: #f8f8f8; -fx-font-size: 14px; -fx-border-width: 1;");
 
         ovrLabel = new Label("OVR: 0");
         ovrLabel.setPadding(new Insets(8, 16, 8, 16));
         ovrLabel.setMinWidth(80);
-        ovrLabel.setAlignment(Pos.CENTER);
         ovrLabel.setStyle("-fx-border-color: #cccccc; -fx-background-color: #f8f8f8; -fx-font-size: 14px; -fx-border-width: 1;");
 
         c4Label = new Label("C4: 0");
         c4Label.setPadding(new Insets(8, 16, 8, 16));
         c4Label.setMinWidth(70);
-        c4Label.setAlignment(Pos.CENTER);
         c4Label.setStyle("-fx-border-color: #cccccc; -fx-background-color: #f8f8f8; -fx-font-size: 14px; -fx-border-width: 1;");
 
         specialRow.getChildren().addAll(qLabel, fLabel, spacer1, zLabel, f3Label, ovrLabel, c4Label);
-
-        // Добавляем все три строки
         statusBar.getChildren().addAll(registersRow, registersRowLow, specialRow);
     }
 
@@ -379,19 +396,18 @@ public class MicrocodeController {
             value <<= 1;
             value |= microAddress[i];
         }
-        microHexLabel.setText("Адрес: " + value);
+        microHexLabel.setText("Адрес RAM: " + value);
     }
-
 
     @FXML
     private void handleLoad() {
-        if (isLoad){
-        cpu.load(value, bits);
-        statusLabel.setText("● ЗАГРУЖЕНА");
-        System.out.println("ЗАГРУЗКА МИКРОКОМАНДЫ");
-        System.out.println(Arrays.toString(bits));
-        cpu.getMicroInstruction()[value].decode();
-        System.out.println(cpu.getMicroInstruction()[value]);}
-        System.out.println("Ошибка, включен режим загрузки");
+        if (isLoad) {
+            cpu.load(value, Arrays.copyOf(bits, bits.length));
+            statusLabel.setText("● ЗАГРУЖЕНА");
+            System.out.println("ЗАГРУЗКА МИКРОКОМАНДЫ ПО АДРЕСУ: " + value);
+            System.out.println(cpu.getMicroInstruction()[value]);
+        } else {
+            statusLabel.setText("● ОТКАЗАНО: РЕЖИМ РАБОТЫ");
+        }
     }
 }
