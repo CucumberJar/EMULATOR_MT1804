@@ -1,0 +1,21 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="EMULATOR_MT1804:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/EMULATOR_MT1804_jar</output-path>
+    <root id="archive" name="EMULATOR_MT1804.jar">
+      <element id="module-output" name="EMULATOR_MT1804" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-controls/21.0.6/javafx-controls-21.0.6-linux.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$USER_HOME$/.cache/JetBrains/IntelliJIdea2025.2/kotlinNotebook/emulator_mt1804.c1104c35/kernels/0.13.0-600-1/kotlin-jupyter-ide-classpath-shadowed-jar/kotlin-jupyter-ide-classpath-shadowed-0.13.0-600-1.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-fxml/21.0.4/javafx-fxml-21.0.4-linux.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/slf4j/slf4j-api/2.0.17/slf4j-api-2.0.17.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-fxml/21.0.4/javafx-fxml-21.0.4.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-base/21.0.6/javafx-base-21.0.6-linux.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/ch/qos/logback/logback-core/1.5.22/logback-core-1.5.22.jar" path-in-jar="/" />
+      <element id="library" level="project" name="kotlin.scripts.Notebook.Dependencies.Compiled for src/main/resources/фв.ipynb dependencies" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-base/21.0.6/javafx-base-21.0.6.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-controls/21.0.6/javafx-controls-21.0.6.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/ch/qos/logback/logback-classic/1.5.22/logback-classic-1.5.22.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-graphics/21.0.6/javafx-graphics-21.0.6-linux.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/org/openjfx/javafx-graphics/21.0.6/javafx-graphics-21.0.6.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>

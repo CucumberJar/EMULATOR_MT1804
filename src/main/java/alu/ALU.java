@@ -2,12 +2,10 @@ package alu;
 
 public class ALU {
     private int aluCode;
-    private int c0; // Входной перенос
+    private int c0;
     private int r;
     private int s;
-    private int out; // Выход АЛУ
-
-    // Флаги
+    private int out;
     private int c4, f3, z, ovr;
 
     public void setSource(int aluCode, int c0, int r, int s) {
@@ -15,6 +13,7 @@ public class ALU {
         this.c0 = c0 & 0x1;
         this.r = r & 0xF;
         this.s = s & 0xF;
+        System.out.println("АЛУ: С0:"+(c0 & 0x1)+"  R:"+(r & 0xF)+"  S:"+(s & 0xF));
     }
 
     public void operation() {
@@ -62,7 +61,13 @@ public class ALU {
         this.ovr = tempOvr;
     }
 
-    public int getOut() { return out; }
+    public String getOuStr() {
+        return String.format("%4s", Integer.toBinaryString(out & 0xF)).replace(' ', '0');
+    }
+
+    public int getOutInt() {
+        return out;
+    }
     public int getC4() { return c4; }
     public int getF3() { return f3; }
     public int getZ() { return z; }

@@ -24,9 +24,11 @@ public class Destination {
                 b.setValue(ramRight);
                 int qRight = (q.getValue() >> 1) | (ms1 << 3);
                 q.setValue(qRight);
+                System.out.println("Сдвиг1");
                 break;
             case 5: // Сдвиг RAM вправо
                 b.setValue((aluOut >> 1) | (ms2 << 3));
+                System.out.println("Сдвиг2");
                 break;
             case 6: // Сдвиг RAM влево, Q влево
                 int ramLeft = (aluOut << 1) | ms2;

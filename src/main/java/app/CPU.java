@@ -9,7 +9,7 @@ import register.Register;
 import java.util.Arrays;
 
 public class CPU {
-    // Память микрокоманд (16 ячеек)
+    // Память микрокоманд (16 ячеек) — теперь сразу инициализируем объекты, чтобы избежать NPE при загрузке
     private MicroInstruction[] microInstruction = new MicroInstruction[16];
     // Регистровый файл БИС (16 рабочих регистров)
     private final Register[] registers = new Register[16];
@@ -22,10 +22,22 @@ public class CPU {
     // Массив флагов: [0]=C4, [1]=F3, [2]=Z, [3]=OVR
     private int[] flags = new int[4];
 
+    // Переменная для связи с физическими тумблерами АДРЕС на панели GUI
+    private int hardwareAddressBusValue = 0;
+
     // --- Новые элементы для микропрограммного управления ---
     private int mpc = 0;                     // Счётчик микрокоманд (Microprogram Counter)
     private final int[] stack = new int[16]; // Стек БМУ на 16 уровней
     private int stackPointer = -1;           // Указатель стека (-1 — пуст)
+
+    private final ALU alu = new ALU();
+
+    public CPU() {
+        for (int i = 0; i < 16; i++) {
+            registers[i] = new Register();
+            microInstruction[i] = new MicroInstruction();
+        }
+    }
 
     public MicroInstruction[] getMicroInstruction() {
         return microInstruction;
@@ -38,29 +50,34 @@ public class CPU {
     // Метод загрузки массива бит в конкретный адрес памяти микрокоманд
     public void load(int address, int[] microInstructionBits) {
         if (address >= 0 && address < 16) {
+            // Безопасно устанавливаем биты, объект гарантированно существует благодаря конструктору
             this.microInstruction[address].setInstruction(microInstructionBits);
         }
     }
-
-    private final ALU alu = new ALU();
 
     public ALU getAlu() {
         return alu;
     }
 
-    // Инициализация процессора при старте
+    // Инициализация процессора при старте/сбросе
     public void start() {
         this.mpc = 0;
         this.stackPointer = -1;
+        this.hardwareAddressBusValue = 0;
         Arrays.fill(stack, 0);
         Arrays.fill(flags, 0);
 
         q.clear();
         f.clear();
         for (int i = 0; i < 16; i++) {
-            registers[i] = new Register();
-            microInstruction[i] = new MicroInstruction();
+            registers[i].clear(); // Очищаем старые данные в регистрах при перезапуске
+            microInstruction[i].clear(); // Сбрасываем инструкции, если это необходимо
         }
+    }
+
+    // Метод для обновления значения шины адреса из контроллера GUI
+    public void updateHardwareAddressBus(int currentGuiAddress) {
+        this.hardwareAddressBusValue = currentGuiAddress;
     }
 
     // Один такт работы процессора
@@ -83,7 +100,7 @@ public class CPU {
         alu.operation();
 
         // 4. Запись результата (Destination)
-        destination.write(current.getDestinationCode(), q, b, alu.getOut(), a, current.getMs2(), current.getMs1());
+        destination.write(current.getDestinationCode(), q, b, alu.getOutInt(), a, current.getMs2(), current.getMs1());
 
         // 5. Обновление флагов состояния АЛУ К1804ВС1
         flags[0] = alu.getC4();
@@ -125,7 +142,7 @@ public class CPU {
             case 0b0010: // 0010: Продолжить (переход на следующий адрес)
                 return (mpc + 1) % 16;
 
-            case 0b0011: // 0011: Переход по клавишам "АДРЕС"
+            case 0b0011: // 0011: Переход по клавишам "АДРЕС" (Команда РАЗВЕТВЛЕНИЕ)
                 return readHardwareAddressBus();
 
             case 0b0100: // 0100: Переход к подпрограмме при F != 0
@@ -206,7 +223,7 @@ public class CPU {
 
     // Имитация чтения адреса с физической панели тренажёра
     private int readHardwareAddressBus() {
-        return 0;
+        return this.hardwareAddressBusValue;
     }
 
     // Геттеры и сеттеры управляющей логики
@@ -218,7 +235,6 @@ public class CPU {
     public Register getF() { return f; }
     public Source getSource() { return source; }
     public void setSource(Source source) { this.source = source; }
-    public Destination getDestination() { return destination; }
     public void setDestination(Destination destination) { this.destination = destination; }
     public Register getRegister(int i) { return registers[i]; }
     public Register[] getRegisters() { return registers; }
@@ -230,7 +246,7 @@ public class CPU {
                 ", Стек SP=" + stackPointer + ", Стек=" + Arrays.toString(Arrays.copyOfRange(stack, 0, Math.max(0, stackPointer+1))) +
                 ", Флаги [C4, F3, Z, OVR]=" + Arrays.toString(flags) +
                 ", Регистр Q=" + q +
-                ", ALU Out=" + alu.getOut() +
+                ", ALU Out=" + alu.getOuStr() +
                 '}';
     }
 }

@@ -3,93 +3,72 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<VBox xmlns:fx="http://javafx.com/fxml"
-      fx:controller="gui.MicrocodeController"
-      spacing="10"
-      alignment="TOP_CENTER"
-      style="-fx-padding: 10; -fx-background-color: #f0f0f0;">
-    <!-- НИЖНЯЯ ПАНЕЛЬ -->
-    <HBox spacing="15" alignment="CENTER"
-          style="-fx-padding: 10; -fx-background-color: #ffffff; -fx-border-color: #cccccc;">
+<SplitPane xmlns:fx="http://javafx.com/fxml"
+           fx:controller="gui.MicrocodeController"
+           dividerPositions="0.25"
+           style="-fx-background-color: #f0f0f0;">
 
-        <!-- Тумблер Загрузка/Работа -->
-        <ToggleButton fx:id="modeSwitch" text="ЗАГРУЗКА"
-                      style="-fx-font-size: 14px; -fx-padding: 10 20;"/>
+    <VBox spacing="10" style="-fx-padding: 10; -fx-background-color: #ffffff;">
+        <Label text="Память микрокоманд (RAM)" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+        <ListView fx:id="microInstructionList" VBox.vgrow="ALWAYS"
+                  style="-fx-font-family: 'Consolas', 'Courier New'; -fx-font-size: 12px;"/>
+    </VBox>
 
-        <!-- Кнопка Пуск -->
-        <Button fx:id="startButton" text="Пуск" onAction="#handleStart"
-                style="-fx-font-size: 14px; -fx-padding: 10 20;"/>
+    <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-padding: 10;">
+        <VBox spacing="10" alignment="TOP_CENTER">
 
-        <!-- Разделитель -->
-        <Region HBox.hgrow="ALWAYS" minWidth="20"/>
+            <HBox spacing="15" alignment="CENTER"
+                  style="-fx-padding: 10; -fx-background-color: #ffffff; -fx-border-color: #cccccc;">
 
-        <!-- Биты управления: Адрес -->
-        <VBox spacing="4" alignment="CENTER">
-            <Label text="Адрес"/>
-            <HBox fx:id="addressRow" spacing="4" alignment="CENTER"/>
+                <ToggleButton fx:id="modeSwitch" text="ЗАГРУЗКА"
+                              style="-fx-font-size: 14px; -fx-padding: 10 20;"/>
+
+                <Button fx:id="startButton" text="Пуск" onAction="#handleStart"
+                        style="-fx-font-size: 14px; -fx-padding: 10 20;"/>
+
+                <Region HBox.hgrow="ALWAYS" minWidth="20"/>
+
+                <HBox spacing="10" alignment="CENTER_LEFT"
+                      style="-fx-padding: 8; -fx-background-color: #ffffff; -fx-border-color: #cccccc;">
+                    <Label text="Адрес RAM для записи:" style="-fx-font-weight: bold;"/>
+                    <HBox fx:id="microAddressRow" spacing="4" alignment="CENTER"/>
+                    <Label fx:id="microHexLabel" text="HEX: 0"/>
+                    <Label fx:id="statusLabel" text="● НЕ ЗАГРУЖЕНА"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                </HBox>
+
+                <VBox spacing="4" alignment="CENTER">
+                    <Label text="Мультиплексор"/>
+                    <HBox fx:id="muxRow" spacing="4" alignment="CENTER"/>
+                </VBox>
+
+                <Region HBox.hgrow="ALWAYS" minWidth="20"/>
+
+                <Button fx:id="loadButton" text="Загрузить" onAction="#handleLoad"
+                        style="-fx-font-size: 14px; -fx-padding: 10 20;"/>
+            </HBox>
+
+
+
+            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
+                        style="-fx-background-color: transparent;">
+                <HBox fx:id="bitRow" spacing="6" alignment="CENTER" style="-fx-padding: 8;"/>
+            </ScrollPane>
+
+            <VBox spacing="6" alignment="CENTER_LEFT"
+                  style="-fx-padding: 8; -fx-background-color: #ffffff; -fx-border-color: #cccccc;">
+                <Label text="Инфикаторы" style="-fx-font-weight: bold;"/>
+                <Separator/>
+                <HBox fx:id="indicatorRow" spacing="15" alignment="CENTER_LEFT"/>
+            </VBox>
+
+            <VBox spacing="6" alignment="CENTER_LEFT"
+                  style="-fx-padding: 8; -fx-background-color: #ffffff; -fx-border-color: #cccccc;">
+                <Label text="Регистры и флаги" style="-fx-font-weight: bold;"/>
+                <Separator/>
+                <VBox fx:id="statusBar" spacing="8" alignment="CENTER_LEFT"/>
+            </VBox>
+
         </VBox>
-
-        <!-- Биты управления: Данные -->
-        <VBox spacing="4" alignment="CENTER">
-            <Label text="Данные"/>
-            <HBox fx:id="dataRow" spacing="4" alignment="CENTER"/>
-        </VBox>
-
-        <!-- Биты управления: Мультиплексор -->
-        <VBox spacing="4" alignment="CENTER">
-            <Label text="Мультиплексор"/>
-            <HBox fx:id="muxRow" spacing="4" alignment="CENTER"/>
-        </VBox>
-
-        <!-- Разделитель -->
-        <Region HBox.hgrow="ALWAYS" minWidth="20"/>
-
-        <!-- Кнопка Загрузить -->
-        <Button fx:id="loadButton" text="Загрузить" onAction="#handleLoad"
-                style="-fx-font-size: 14px; -fx-padding: 10 20;"/>
-
-    </HBox>
-
-    <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
-    <HBox spacing="10" alignment="CENTER_LEFT"
-          style="-fx-padding: 8; -fx-background-color: #ffffff; -fx-border-color: #cccccc;">
-
-        <Label text="Микрокоманда" style="-fx-font-weight: bold;"/>
-
-        <HBox fx:id="microAddressRow" spacing="4" alignment="CENTER"/>
-
-        <Label fx:id="microHexLabel" text="HEX: 0"/>
-
-        <Label fx:id="statusLabel" text="● НЕ ЗАГРУЖЕНА"/>
-
-        <Region HBox.hgrow="ALWAYS"/>
-
-
-    </HBox>
-
-    <!-- ТЕТРАДЫ -->
-    <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
-                style="-fx-background-color: transparent;">
-        <HBox fx:id="bitRow" spacing="6" alignment="CENTER"
-              style="-fx-padding: 8;"/>
     </ScrollPane>
-
-
-
-    <!-- ИНДИКАТОРЫ -->
-    <VBox spacing="6" alignment="CENTER_LEFT"
-          style="-fx-padding: 8; -fx-background-color: #ffffff; -fx-border-color: #cccccc;">
-        <Label text="Индикаторы" style="-fx-font-weight: bold;"/>
-        <Separator/>
-        <HBox fx:id="indicatorRow" spacing="15" alignment="CENTER_LEFT"/>
-    </VBox>
-
-    <!-- РЕГИСТРЫ -->
-    <VBox spacing="6" alignment="CENTER_LEFT"
-          style="-fx-padding: 8; -fx-background-color: #ffffff; -fx-border-color: #cccccc;">
-        <Label text="Регистры и флаги" style="-fx-font-weight: bold;"/>
-        <Separator/>
-        <VBox fx:id="statusBar" spacing="8" alignment="CENTER_LEFT"/>
-    </VBox>
-
-</VBox>
+</SplitPane>
